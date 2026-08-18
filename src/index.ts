@@ -1,4 +1,6 @@
 import { EmbedBuilder, time, TimestampStyles, WebhookClient } from 'discord.js';
+import Turndown from 'turndown'
+import { parseHTML } from 'linkedom';
 import { WebhookPayload } from './types';
 
 const EventInfo = {
@@ -20,6 +22,11 @@ const verifySignature = async (env: Env, body: string, signature: string): Promi
 
 	return await crypto.subtle.verify('HMAC', key, Uint8Array.fromHex(signature), new TextEncoder().encode(body));
 };
+
+const turndown = new Turndown({
+	headingStyle: 'atx',
+	codeBlockStyle: 'fenced',
+});
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
@@ -43,7 +50,9 @@ export default {
 		});
 
 		const eventInfo = EventInfo[event] ?? unknownEventInfo;
-		const description = card.description && card.description?.trim() !== '' ? card.description : undefined;
+
+		const description =
+			card.description && card.description?.trim() !== '' ? turndown.turndown(parseHTML(card.description).document) : undefined;
 
 		const embed = new EmbedBuilder()
 			.setTitle(card.title.length > 256 ? card.title.substring(0, 253) + '...' : card.title)
